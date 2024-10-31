@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,8 +89,10 @@ public class Server {
                             broadcastMessage("#REFRESH:"+client.getUsername());
                         }
                         broadcastMessage("#DONEREFRESHING");
-                    } else if (admin && clientMessage.contains("#GAMESTART")) {     //If the admin calls the game to start
-                        broadcastMessage("Game Started!");
+                    //} else if (admin && clientMessage.contains("#GAMESTART")) {     //If the admin calls the game to start
+                    } else if (clientMessage.contains("#GAME")) {
+                        
+                        
                     } else if (msg.startsWith("@")){        //If Mentioning somebody with @, this means PRIVATE MESSAGING
                         handlePrivateMessage(msg, username);
                     } else {
@@ -120,10 +124,11 @@ public class Server {
                         broadcastMessage("#REFRESH:"+client.getUsername());
                     }
                     broadcastMessage("#DONEREFRESHING");
-                    broadcastMessage(username + " has left the chat.");
+                    broadcastMessage("Server: "+username + " has left the chat.");
                 }
         }
     }
+
 
     private void handlePrivateMessage(String message, String sender) {          //Private messaging
         // Assuming the message format is "sender: @receiver actualMessage"
@@ -135,13 +140,15 @@ public class Server {
             broadcastMessage(sender+": "+message);  //If @ is used without a connected client, treat it as a regular message and return
         } else {    //Else it is a private message
             String msg = parts[1];
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            String timestamp = LocalDateTime.now().format(formatter);
             synchronized (clients) {
                 for (ClientHandler client : clients) {
                     if (client.getUsername().equals(receiver)) {        //Print only in sender and receiver chat
-                        client.output.println(this.username + " (private): " + msg);
+                        client.output.println("[" + timestamp + "] "+this.username + " (private): " + msg);
                     }
                     if (client.getUsername().equals(sender)) {
-                        client.output.println(this.username + " (to @"+receiver+"): " + msg);
+                        client.output.println("[" + timestamp + "] "+this.username + " (to @"+receiver+"): " + msg);
                     }
                 }
             }
@@ -170,13 +177,17 @@ public class Server {
         
     }
 
-
     private String getData(String message, boolean user) throws EmptyUserException {    //Obtain message or sender depending on the user boolean. True means get sender, false means get message
-        String[] parts = message.split(" ", 2);
-        String sender = parts[0].replace(":", "");
-        String msg = parts[1];
-        if(parts[0] == null || parts[1] == null) { throw new EmptyUserException(); }
-        if(user){ return sender; } else { return msg; }
+        String[] parts = message.split(" ", 3); // Split into [timestamp] [username:] [message]
+        if (parts.length < 3) { throw new EmptyUserException(); }
+    
+        String sender = parts[1].replace(":", ""); // Extract username, remove ":"
+        String msg = parts[2]; // Extract message content
+    
+        return user ? sender : msg;
     }
+
+
+
 }
 }
