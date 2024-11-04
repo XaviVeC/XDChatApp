@@ -1,7 +1,18 @@
 package com.example;
 
 import java.awt.BorderLayout;
-import java.awt.event.ActionEvent;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
@@ -15,49 +26,321 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.crypto.SecretKey;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
+import games.Wordle;
 
 public class Client extends JFrame {
     private Socket socket;
     private PrintWriter output;
     private BufferedReader input;
-    private SecretKey key;     //SHOULD BE TYPE SECRETKEY
-    private JTextArea textArea;
-    private JTextField textField;
+    private SecretKey key;     
+    private JTextArea chatArea;
+    private JTextField messageField;
     private String username;
     private static List<String> userList = new ArrayList<>();
+    private final JMenu lobby = new JMenu("Lobby");
+
+
+    // Simulated user database for validation (for demonstration purposes only)
+    private List<String> registeredUsers = new ArrayList<>();
+    private List<String> registeredPasswords = new ArrayList<>();
+
+    // Panels for different screens
+    private JPanel mainPanel;
+    private CardLayout cardLayout;
 
     public Client(String hostname, int port) {
-        // Create GUI
-        setSize(400, 300);
+        // Apply Nimbus Look and Feel
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        // Simulate existing users for testing
+        registeredUsers.add("user1");
+        registeredPasswords.add("pwd1");
+        registeredUsers.add("user2");
+        registeredPasswords.add("pwd2");
+
+        // Set up CardLayout
+        cardLayout = new CardLayout();
+        mainPanel = new JPanel(cardLayout);
+        add(mainPanel);
+
+        // Initialize screens
+        initializeScreen1();
+        initializeScreen2Login();
+        initializeScreen2Register();
+        initializeScreen3Lobby();
+        initializeScreen4Invite();
+        initializeScreen5Game();
+
+        // Set default configurations
+        setSize(600, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
 
-        
+        // Connect to server
+        connectToServer(hostname, port);
 
-        // Text area
-        textArea = new JTextArea();
-        textArea.setEditable(false);
-        add(new JScrollPane(textArea), BorderLayout.CENTER);
+        // Show the first screen
+        cardLayout.show(mainPanel, "screen1");
+    }
 
-        // Text field
-        textField = new JTextField();
-        add(textField, BorderLayout.SOUTH);
-        textField.addActionListener((ActionEvent e) -> {
-            sendMessage(textField.getText());
-            textField.setText("");
+    private void initializeScreen1() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(240, 248, 255));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JButton loginButton = new JButton("Log In");
+        loginButton.setBackground(new Color(100, 149, 237));
+        loginButton.setForeground(Color.WHITE);
+        loginButton.setFocusPainted(false);
+        loginButton.setFont(new Font("Arial", Font.BOLD, 14));
+        loginButton.addActionListener(e -> cardLayout.show(mainPanel, "screen2Login"));
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(loginButton, gbc);
+
+        JButton registerButton = new JButton("Register");
+        registerButton.setBackground(new Color(34, 139, 34));
+        registerButton.setForeground(Color.WHITE);
+        registerButton.setFocusPainted(false);
+        registerButton.setFont(new Font("Arial", Font.BOLD, 14));
+        registerButton.addActionListener(e -> cardLayout.show(mainPanel, "screen2Register"));
+        gbc.gridy = 1;
+        panel.add(registerButton, gbc);
+
+        mainPanel.add(panel, "screen1");
+    }
+
+    private void initializeScreen2Login() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(240, 248, 255));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel userLabel = new JLabel("Usuari:");
+        userLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(userLabel, gbc);
+
+        JTextField userField = new JTextField(15);
+        userField.setFont(new Font("Arial", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        panel.add(userField, gbc);
+
+        JLabel passLabel = new JLabel("Contrasenya:");
+        passLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 1;
+        panel.add(passLabel, gbc);
+
+        JPasswordField passField = new JPasswordField(15);
+        passField.setFont(new Font("Arial", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        panel.add(passField, gbc);
+
+        JButton loginButton = new JButton("Iniciar Sessió");
+        loginButton.setBackground(new Color(100, 149, 237));
+        loginButton.setForeground(Color.WHITE);
+        loginButton.setFocusPainted(false);
+        loginButton.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+        panel.add(loginButton, gbc);
+
+        loginButton.addActionListener(e -> {
+            String enteredUsername = userField.getText();
+            String password = new String(passField.getPassword());
+
+            if (registeredUsers.contains(enteredUsername) && 
+                registeredPasswords.get(registeredUsers.indexOf(enteredUsername)).equals(password)) {
+                username = enteredUsername; // Assign the entered username
+                setTitle("Chat "+username);
+                sendMessage("#NEWUSER:"+username);
+                cardLayout.show(mainPanel, "screen3Lobby");
+            } else {
+                JOptionPane.showMessageDialog(this, "Usuari o contrasenya incorrecta.", "Error d'inici de sessió", JOptionPane.ERROR_MESSAGE);
+            }
         });
+        
+        mainPanel.add(panel, "screen2Login");
+    }
+
+    private void initializeScreen2Register() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(new Color(240, 248, 255));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        JLabel userLabel = new JLabel("Usuari:");
+        userLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(userLabel, gbc);
+
+        JTextField userField = new JTextField(15);
+        userField.setFont(new Font("Arial", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        panel.add(userField, gbc);
+
+        JLabel passLabel = new JLabel("Contrasenya:");
+        passLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 1;
+        panel.add(passLabel, gbc);
+
+        JPasswordField passField = new JPasswordField(15);
+        passField.setFont(new Font("Arial", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        panel.add(passField, gbc);
+
+        JLabel confirmPassLabel = new JLabel("Repetir Contrasenya:");
+        confirmPassLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 2;
+        panel.add(confirmPassLabel, gbc);
+
+        JPasswordField confirmPassField = new JPasswordField(15);
+        confirmPassField.setFont(new Font("Arial", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        panel.add(confirmPassField, gbc);
+
+        JButton registerButton = new JButton("Registrar-se");
+        registerButton.setBackground(new Color(34, 139, 34));
+        registerButton.setForeground(Color.WHITE);
+        registerButton.setFocusPainted(false);
+        registerButton.setFont(new Font("Arial", Font.BOLD, 14));
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+        panel.add(registerButton, gbc);
+
+        registerButton.addActionListener(e -> {
+            String enteredUsername = userField.getText().trim();  // Eliminar espais en blanc
+            String password = new String(passField.getPassword()).trim();
+            String confirmPassword = new String(confirmPassField.getPassword()).trim();
+        
+            // Comprovació de camps buits
+            if (enteredUsername.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Tots els camps són obligatoris.", "Error de registre", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        
+            // Comprovació si l'usuari ja existeix
+            if (registeredUsers.contains(enteredUsername)) {
+                JOptionPane.showMessageDialog(this, "Aquest usuari ja existeix.", "Error de registre", JOptionPane.ERROR_MESSAGE);
+            } else if (!password.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this, "Les contrasenyes no coincideixen.", "Error de registre", JOptionPane.ERROR_MESSAGE);
+            } else {
+                registeredUsers.add(enteredUsername);
+                registeredPasswords.add(password);
+                username = enteredUsername; // Assignar el nom d'usuari en registrar-se
+                JOptionPane.showMessageDialog(this, "Registre complet!");
+                setTitle("Chat "+username);
+                sendMessage("#NEWUSER:"+username);
+                cardLayout.show(mainPanel, "screen3Lobby");
+            }
+        });
+
+        mainPanel.add(panel, "screen2Register");
+    }
+
+    private void initializeScreen3Lobby() {
+        JPanel panel = new JPanel(new BorderLayout());
+        
+        // Sidebar for chat list with title "XATS"
+        JPanel sidebar = new JPanel();
+        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
+        sidebar.setPreferredSize(new Dimension(150, getHeight()));
+        sidebar.setBackground(new Color(200, 200, 200));
+        JLabel chatsLabel = new JLabel("XATS");
+        chatsLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        chatsLabel.setForeground(new Color(50, 50, 50));
+        chatsLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); 
+        chatsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        sidebar.add(chatsLabel);
+
+        for (String user : userList) {
+            JLabel userLabel = new JLabel(user);
+            userLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+            sidebar.add(userLabel);
+        }
+        
+        
+        // Chat area
+        chatArea = new JTextArea();
+        chatArea.setEditable(false);
+        chatArea.setLineWrap(true);
+        chatArea.setWrapStyleWord(true);
+
+        JScrollPane chatScrollPane = new JScrollPane(chatArea);
+        
+        // Message input field with "Escriu el teu missatge:"
+        JPanel messagePanel = new JPanel(new BorderLayout());
+        messageField = new JTextField("Escriu el teu missatge:");
+        messageField.setFont(new Font("Arial", Font.PLAIN, 14));
+        messageField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                messageField.setText("");
+            }
+        });
+
+        messageField.addActionListener(e -> {
+            String message = messageField.getText();
+            sendMessage(message);
+            messageField.setText("");  
+        });
+
+        JButton sendButton = new JButton("Enviar");
+        sendButton.setBackground(new Color(60, 179, 113));
+        sendButton.setForeground(Color.WHITE);
+        sendButton.setFocusPainted(false);
+        sendButton.setFont(new Font("Arial", Font.BOLD, 14));
+        sendButton.addActionListener(e -> {
+            String message = messageField.getText();
+            sendMessage(message);
+            messageField.setText("");
+        });
+
+        messagePanel.add(messageField, BorderLayout.CENTER);
+        messagePanel.add(sendButton, BorderLayout.EAST);
+
+        JButton playButton = new JButton("Jugar");
+        playButton.setBackground(new Color(255, 165, 0));
+        playButton.setForeground(Color.WHITE);
+        playButton.setFocusPainted(false);
+        playButton.setFont(new Font("Arial", Font.BOLD, 14));
+        playButton.addActionListener(e -> cardLayout.show(mainPanel, "screen4Invite"));
+
 
         // Menu to open lobby
         JMenuBar menuBar = new JMenuBar();
         setJMenuBar(menuBar);
-        final JMenu lobby = new JMenu("Lobby");
         menuBar.add(lobby);
         JMenuItem lobbyItem = new JMenuItem("");
         lobby.add(lobbyItem);
@@ -65,49 +348,105 @@ public class Client extends JFrame {
             lobby.add(new JMenuItem(user));
         }
 
-                // Add a "Game Selection" menu
-        final JMenu gameSelection = new JMenu("Game Selection");
-        menuBar.add(gameSelection);
+        lobby.setBackground(new Color(255, 165, 0));
+        lobby.setForeground(Color.BLACK);
+        lobby.setFocusPainted(false);
+        lobby.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(menuBar, BorderLayout.WEST);
+        topPanel.add(playButton, BorderLayout.EAST);
 
-        // List of available games
-        String[] games = {"WORDLE", "Battleships", "BombParty"}; // Add actual game names here
+        panel.add(sidebar, BorderLayout.WEST);
+        panel.add(chatScrollPane, BorderLayout.CENTER);
+        panel.add(messagePanel, BorderLayout.SOUTH);
+        panel.add(topPanel, BorderLayout.NORTH);
 
-        // Add menu items for each game
-        for (String game : games) {
-            JMenuItem gameItem = new JMenuItem(game);
-            gameSelection.add(gameItem);
-            
-            // Attach an ActionListener to each game item
-            gameItem.addActionListener(e -> startGame(game)); // Method to start the game
+        mainPanel.add(panel, "screen3Lobby");
+
+    }
+
+    private void initializeScreen4Invite() {
+        JPanel panel = new JPanel(new GridLayout(userList.size() + 1, 1));
+        List<JCheckBox> checkBoxes = new ArrayList<>();
+        for (String user : userList) {
+            JCheckBox checkBox = new JCheckBox(user);
+            checkBoxes.add(checkBox);
+            panel.add(checkBox);
         }
 
+        JButton okButton = new JButton("Wordle");
+        okButton.setBackground(new Color(0, 128, 128));
+        okButton.setForeground(Color.WHITE);
+        okButton.setFont(new Font("Arial", Font.BOLD, 14));
         
+        JButton cancelButton = new JButton("Cancel·lar");
+        cancelButton.setBackground(new Color(220, 20, 60));
+        cancelButton.setForeground(Color.WHITE);
+        cancelButton.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        okButton.addActionListener(e -> {
+            List<String> selectedUsers = new ArrayList<>();
+            for (JCheckBox checkBox : checkBoxes) {
+                if (checkBox.isSelected()) {
+                    selectedUsers.add(checkBox.getText());
+                }
+            }
+            // Show main chat screen and open new window for Wordle game
+            cardLayout.show(mainPanel, "screen3Lobby");
+            sendMessage("#GAME1 "+this.username);
+            /*JFrame wordleFrame = new JFrame("Wordle");
+            wordleFrame.setSize(300, 200);
+            wordleFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            wordleFrame.setLocationRelativeTo(null);
 
-        // Connect to server
+            // Adding Cancel button to the Wordle frame
+            JPanel wordlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+            JButton wordleCancelButton = new JButton("Cancel·lar");
+            wordleCancelButton.setBackground(new Color(220, 20, 60));
+            wordleCancelButton.setForeground(Color.WHITE);
+            wordleCancelButton.setFont(new Font("Arial", Font.BOLD, 14));
+            wordleCancelButton.addActionListener(event -> wordleFrame.dispose());
+
+            wordlePanel.add(wordleCancelButton);
+            wordleFrame.add(wordlePanel);
+            wordleFrame.setVisible(true);*/
+        });
+        
+        cancelButton.addActionListener(e -> cardLayout.show(mainPanel, "screen3Lobby"));
+
+        panel.add(okButton);
+        panel.add(cancelButton);
+        mainPanel.add(panel, "screen4Invite");
+    }
+
+    private void initializeScreen5Game() {
+        JPanel panel = new JPanel(new BorderLayout());
+        JTextField inputField = new JTextField();
+        JButton cancelButton = new JButton("Cancel·lar");
+
+        cancelButton.addActionListener(e -> cardLayout.show(mainPanel, "screen3Lobby"));
+        inputField.addActionListener(e -> {
+            String input = inputField.getText();
+            sendMessage(input);
+            inputField.setText("");
+        });
+
+        panel.add(inputField, BorderLayout.CENTER);
+        panel.add(cancelButton, BorderLayout.EAST);
+        mainPanel.add(panel, "screen5Game");
+    }
+
+    private void connectToServer(String hostname, int port) {
         try {
             socket = new Socket(hostname, port);
             output = new PrintWriter(socket.getOutputStream(), true);
             input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            do{
-                username = JOptionPane.showInputDialog(Client.this, "Enter your username:", "Username", JOptionPane.PLAIN_MESSAGE);
-                if (username == null || username.trim().isEmpty() || username.equalsIgnoreCase("Server") || username.equalsIgnoreCase("")){
-                    JOptionPane.showMessageDialog(Client.this, "Error! Forbidden Username");
-                }
-                if(userList.contains(username)){
-                    JOptionPane.showMessageDialog(Client.this, "Error! Username already in use");
-                }
-            } while (username == null || username.trim().isEmpty() || username.equals("Server") || username.equalsIgnoreCase("") || userList.contains(username));
-    
-            setTitle("Chat "+username);
-
-            sendMessage("#NEWUSER:"+username);
-
-            // Read messages from the server in a new thread
             Thread thread = new Thread(() -> {
                 try {
                     String serverMessage;
-                    while ((serverMessage = input.readLine()) != null) {        //Keep reading server messages
+                    while ((serverMessage = input.readLine()) != null) {
                         if(serverMessage.contains("#NEWUSER:")){    //If new user, add it to the list and to the lobby tab
                             JMenuItem newUser = new JMenuItem(addUser(serverMessage));
                             lobby.add(newUser);
@@ -122,19 +461,37 @@ public class Client extends JFrame {
                             for(String user : userList){
                                 lobby.add(new JMenuItem(user));
                             }
+                        } else if(serverMessage.contains("#STARTWORDLE")){
+                            int response = JOptionPane.showConfirmDialog(this,"Do you want to accept this action?","Confirm",JOptionPane.YES_NO_OPTION,JOptionPane.QUESTION_MESSAGE);
+                            switch (response) {
+                                case JOptionPane.YES_OPTION:
+                                    JOptionPane.showMessageDialog(this, "You accepted! Waiting for other players.");
+                                    sendMessage("#GAME1ACCEPT "+this.username);
+                                    break;
+                                case JOptionPane.NO_OPTION:
+                                    JOptionPane.showMessageDialog(this, "You declined!");
+                                    sendMessage("#GAME1DECLINE "+this.username);
+                                    break;
+                                default:
+                                    JOptionPane.showMessageDialog(this, "You declined!");
+                                    sendMessage("#GAME1DECLINE");
+                                    break;
+                            }
+                        } else if(serverMessage.contains("#CONTINUEWORDLE")){
+                            startWordle();
                         } else {
-                            serverMessage = decryptMessage(serverMessage);
-                            textArea.append(serverMessage + "\n");      //Regular messages are added from the input to the text area
+                            appendMessage(serverMessage, Color.BLACK, false);
                         }
                     }
                 } catch (IOException e) {
-                    return;
+                    e.printStackTrace();
                 }
             });
             thread.start();
+
             addWindowListener(new WindowAdapter() {
                 @Override
-                public void windowClosing(WindowEvent e) {      //On window close, terminate client and close socket with the server.
+                public void windowClosing(WindowEvent e) {
                     try {
                         if (socket != null) {
                             socket.close();
@@ -151,32 +508,20 @@ public class Client extends JFrame {
         }
     }
 
-    private String decryptMessage(String message) {
-        try {
-            //String decryptedMessage = Encrypt.decrypt(message, key);  We don't have the key so we can't decrypt
-            return message;     //Should be decryptedMessage if it worked
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
-        }
-    }
-
-
-    private String extractKey(String message) {
-        int separatorIndex = message.indexOf(':');      //Split the message through the ':'
-        if (separatorIndex != -1) {
-            String u = message.substring(separatorIndex + 1).trim();    //Contains username
-            return u;
-        }
-        return "";
-    }
-
-    private void sendMessage(String message) {      //DECISION: Message is "sender: message"
+    private void sendMessage(String message) {
         if (message != null && !message.trim().isEmpty()) {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
             String timestamp = LocalDateTime.now().format(formatter);
-            output.println("[" + timestamp + "] " +username + ": " + message);
+            output.println("[" + timestamp + "] " + username + ": " + message);
         }
+    }
+
+    private void appendMessage(String message, Color color, boolean isUser) {
+        // Afegeix el missatge al xat
+        String formattedMessage = isUser ? "[" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "] " + message : message; 
+        chatArea.setForeground(color);
+        chatArea.append(formattedMessage + "\n");
+        chatArea.setForeground(Color.BLACK);
     }
 
     private String addUser(String message) {
@@ -199,22 +544,14 @@ public class Client extends JFrame {
         }
     }
 
-    // Method to start the selected game
-    private void startGame(String gameName) {
-        // Logic to start the selected game
-            switch (gameName) {
-                case "WORDLE" -> // Start Game 1
-                    sendMessage("#GAME1");
-                case "BattleShips" -> // Start Game 2
-                    sendMessage("#GAME2");
-                case "BombParty" -> // Start Game 3
-                    sendMessage("#GAME3");
-                default -> System.out.println("Game not recognized.");
-            }
-        }
+    private void startWordle(){
+        SwingUtilities.invokeLater(() -> new Wordle());
+    }
 
     public static void main(String[] args) {
         Client client = new Client("localhost", 8888);      //Connect to port 8888 from localhost
         client.setVisible(true);    //Set gui visible
     }
+
+    
 }

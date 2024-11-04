@@ -53,6 +53,7 @@ public class Server {
         private boolean admin = false;
         private PrintWriter output;
         private String username;
+        private ArrayList<String> players = new ArrayList<>();
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -84,15 +85,33 @@ public class Server {
                     msg = getData(clientMessage, false);
                     if (clientMessage.contains("#NEWUSER:")){       //If we receive NEWUSER command, we broadcast it to the other clients
                         broadcastMessage("#NEWLIST");
-                        broadcastMessage("Server: "+username + " has joined the chat.");
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                        String timestamp = LocalDateTime.now().format(formatter);
+                        broadcastMessage("[" + timestamp + "] " + "Server: "+username + " has joined the chat.");
                         for (ClientHandler client : clients){
                             broadcastMessage("#REFRESH:"+client.getUsername());
                         }
                         broadcastMessage("#DONEREFRESHING");
                     //} else if (admin && clientMessage.contains("#GAMESTART")) {     //If the admin calls the game to start
-                    } else if (clientMessage.contains("#GAME")) {
+                    } else if (clientMessage.contains("#GAME1 ")) {
+                        String[] parts = clientMessage.split(" ", 3);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                        String timestamp = LocalDateTime.now().format(formatter);
+                        broadcastMessage("[" + timestamp + "] " + "Server: "+parts[1]+" started a Wordle Game...");
+                        broadcastMessage("#STARTWORDLE");
                         
-                        
+                    } else if (clientMessage.contains("#GAME1ACCEPT")){
+                        String[] parts = clientMessage.split(" ", 3);
+                        broadcastMessage("#CONTINUEWORDLE", parts[1].replaceAll(".$", ""));
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                        String timestamp = LocalDateTime.now().format(formatter);
+                        broadcastMessage("[" + timestamp + "] " + "Server: "+parts[1].replaceAll(".$", "")+" joined a Wordle Game...");
+                    } else if (clientMessage.contains("#GAME1DECLINE")){
+                        String[] parts = clientMessage.split(" ", 3);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                        String timestamp = LocalDateTime.now().format(formatter);
+                        broadcastMessage("[" + timestamp + "] " + "Server: "+parts[1].replaceAll(".$", "")+" didn't join Wordle Game...");
+
                     } else if (msg.startsWith("@")){        //If Mentioning somebody with @, this means PRIVATE MESSAGING
                         handlePrivateMessage(msg, username);
                     } else {
@@ -124,7 +143,9 @@ public class Server {
                         broadcastMessage("#REFRESH:"+client.getUsername());
                     }
                     broadcastMessage("#DONEREFRESHING");
-                    broadcastMessage("Server: "+username + " has left the chat.");
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+                    String timestamp = LocalDateTime.now().format(formatter);
+                    broadcastMessage("[" + timestamp + "] " + "Server: "+username + " has left the chat.");
                 }
         }
     }
@@ -158,6 +179,16 @@ public class Server {
         synchronized (clients) {
             for (ClientHandler client : clients) {
                 client.output.println(message);
+            }
+        }
+    }
+
+    private void broadcastMessage(String message, String user) {     //For each client, print on their output stream (encrypted)
+        synchronized (clients) {
+            for (ClientHandler client : clients) {
+                if(client.getUsername().equals(user)){
+                    client.output.println(message);
+                }
             }
         }
     }
