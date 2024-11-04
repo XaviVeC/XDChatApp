@@ -1,5 +1,7 @@
 package games;
+
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -10,72 +12,119 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 public class Wordle extends JFrame {
-    
-    private static final int MAX_ATTEMPTS = 5;
-    private static final ArrayList<String> llista = getLlista();
+    private static final int MAX_GUESSES = 5;
+    private static final ArrayList<String> LLISTA = getLlista();
     private String targetWord;
-    private int attempts;
+    private int guessCount = 0;
+
     private JTextField guessField;
-    private JTextArea feedbackArea;
-    private JPanel gridPanel;
+    private JPanel guessesPanel;
 
     public Wordle() {
         setTitle("Wordle Game");
-        setSize(600, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(400, 600);
+        setLayout(new BorderLayout());
 
-        targetWord = chooseRandomWord();
-        attempts = 0;
+        targetWord = getRandomWord().toLowerCase();
 
-        // Create the guess field and button
-        guessField = new JTextField(10); // Adjust width of the text field
-        JButton guessButton = new JButton("Guess");
+        JLabel titleLabel = new JLabel("Endevina el Mot!", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        add(titleLabel, BorderLayout.NORTH);
 
-        // Feedback area
-        feedbackArea = new JTextArea(10, 30); // Adjust size of the feedback area
-        feedbackArea.setEditable(false);
-        feedbackArea.setLineWrap(true);
-        feedbackArea.setWrapStyleWord(true);
-        feedbackArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        guessesPanel = new JPanel();
+        guessesPanel.setLayout(new GridLayout(MAX_GUESSES, 1));
+        add(guessesPanel, BorderLayout.CENTER);
 
-        // Button action listener
-        guessButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                makeGuess();
-            }
-        });
-
-        // Panel for guess input
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new FlowLayout());
-        inputPanel.add(guessButton);
+
+        guessField = new JTextField(5);
+        guessField.setFont(new Font("Arial", Font.PLAIN, 20));
         inputPanel.add(guessField);
 
-        // Grid panel for any additional UI elements (currently not used for the grid but can be expanded)
-        gridPanel = new JPanel();
-        gridPanel.setLayout(new GridLayout(MAX_ATTEMPTS, 1));
+        JButton submitButton = new JButton("Submit");
+        submitButton.setFont(new Font("Arial", Font.BOLD, 14));
+        submitButton.addActionListener(new SubmitGuessListener());
+        inputPanel.add(submitButton);
 
-        // Add components to the frame
-        add(inputPanel, BorderLayout.NORTH);
-        add(new JScrollPane(feedbackArea), BorderLayout.CENTER); // Feedback area in the center
-        add(gridPanel, BorderLayout.EAST);
+        add(inputPanel, BorderLayout.SOUTH);
 
         setVisible(true);
     }
+
+    private String getRandomWord() {
+        Random rand = new Random();
+        return LLISTA.get(rand.nextInt(LLISTA.size()));
+    }
+
+    private void checkGuess(String guess) {
+        JPanel guessPanel = new JPanel();
+        guessPanel.setLayout(new GridLayout(1, 5));
+
+        for (int i = 0; i < 5; i++) {
+            JLabel letterLabel = new JLabel(String.valueOf(guess.charAt(i)), SwingConstants.CENTER);
+            letterLabel.setOpaque(true);
+            letterLabel.setFont(new Font("Arial", Font.BOLD, 20));
+            letterLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+            if (guess.charAt(i) == targetWord.charAt(i)) {
+                letterLabel.setBackground(Color.GREEN); // correct letter, correct position
+            } else if (targetWord.contains(String.valueOf(guess.charAt(i)))) {
+                letterLabel.setBackground(Color.YELLOW); // correct letter, wrong position
+            } else {
+                letterLabel.setBackground(Color.LIGHT_GRAY); // incorrect letter
+            }
+            guessPanel.add(letterLabel);
+        }
+
+        guessesPanel.add(guessPanel);
+        guessesPanel.revalidate();
+        guessesPanel.repaint();
+
+        if (guess.equals(targetWord)) {
+            JOptionPane.showMessageDialog(this, "Felicitats! L'has encertat!!");
+            resetGame();
+        } else if (++guessCount >= MAX_GUESSES) {
+            JOptionPane.showMessageDialog(this, "Game Over! La paraula era: " + targetWord);
+            resetGame();
+        }
+    }
+
+    private void resetGame() {
+        targetWord = getRandomWord();
+        guessCount = 0;
+        guessesPanel.removeAll();
+        guessesPanel.revalidate();
+        guessesPanel.repaint();
+    }
+
+    private class SubmitGuessListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String guess = guessField.getText().toLowerCase();
+            if (guess.length() != 5 || !LLISTA.contains(guess)) {
+                JOptionPane.showMessageDialog(null, "Siusplau, usa una paraula vàlida de 5 lletres.");
+                return;
+            }
+            checkGuess(guess);
+            guessField.setText("");
+        }
+    }
+
     public static ArrayList<String> getLlista() {
         ArrayList<String> wordsList = new ArrayList<>();
         try {
@@ -87,67 +136,10 @@ public class Wordle extends JFrame {
         }
         return wordsList;
     }
-    private String chooseRandomWord() {
-        Random random = new Random();
-        int randomNumber = random.nextInt(10500);
-        return llista.get(randomNumber);
-    }
 
-    private void makeGuess() {
-        String guess = guessField.getText().toLowerCase();
-        guessField.setText("");
-
-        if (isValidGuess(guess)) {
-            feedbackArea.append("Attempt " + (attempts + 1) + ": " + guess + "\n");
-            String feedback = getFeedback(guess);
-            feedbackArea.append(feedback + "\n");
-            attempts++;
-
-            if (guess.equals(targetWord)) {
-                feedbackArea.append("Congratulations! You've guessed the word: " + targetWord + "\n");
-                guessField.setEnabled(false);
-            } else if (attempts >= MAX_ATTEMPTS) {
-                feedbackArea.append("Sorry! You've run out of attempts. The word was: " + targetWord + "\n");
-                guessField.setEnabled(false);
-            }
-        } else {
-            feedbackArea.append("Invalid guess. Please enter a valid 5-letter word.\n");
-        }
-    }
-
-    private boolean isValidGuess(String guess) {
-        return guess.length() == 5 && llista.contains(guess);
-    }
-
-    private String getFeedback(String guess) {
-        StringBuilder feedback = new StringBuilder();
-        boolean[] checked = new boolean[5]; // To avoid double counting letters
-
-        // First pass for correct letters in the correct position
-        for (int i = 0; i < 5; i++) {
-            if (guess.charAt(i) == targetWord.charAt(i)) {
-                feedback.append("[").append(guess.charAt(i)).append("] "); // Correct position
-                checked[i] = true; // Mark as checked
-            } else {
-                feedback.append("_ "); // Placeholder for feedback
-            }
-        }
-
-        // Second pass for correct letters in the wrong position
-        for (int i = 0; i < 5; i++) {
-            if (!checked[i]) {
-                char currentChar = guess.charAt(i);
-                if (targetWord.indexOf(currentChar) != -1 && !feedback.toString().contains("[" + currentChar + "]")) {
-                    feedback.setCharAt(i * 2, '{'); // Correct letter but wrong position
-                    feedback.setCharAt(i * 2 + 1, currentChar);
-                    feedback.setCharAt(i * 2 + 2, '}'); // Adding brackets for feedback
-                }
-            }
-        }
-
-        return feedback.toString();
-    }
 }
+
+
 
 
 
