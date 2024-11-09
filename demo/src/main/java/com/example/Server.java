@@ -19,6 +19,7 @@ import messages.Encrypt;
 public class Server {
     private static final List<ClientHandler> clients = new ArrayList<>();
     private static final List<String> clientNames = new ArrayList<>();
+    private static final HashMessages hashClients = new HashMessages();
     //TODO Tabla hash
     private static boolean adminClient = false;
     private static final SecretKey key = Encrypt.generateKey();
@@ -54,7 +55,6 @@ public class Server {
         private boolean admin = false;
         private PrintWriter output;
         private String username;
-        private ArrayList<String> players = new ArrayList<>();
 
         public ClientHandler(Socket socket) {
             this.socket = socket;

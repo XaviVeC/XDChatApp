@@ -9,6 +9,7 @@ public class Message {
     private String type;    //Header containing CMD or CHAT
     private LocalDateTime timestamp;
     private String client;
+    HashMessages hashMessages = new HashMessages();
 
     // Constructor
     //Recibe mensaje y cliente
@@ -18,7 +19,7 @@ public class Message {
     public Message(String message, String client) {
         this.timestamp = LocalDateTime.now();
         this.client = client;
-        this.message = message;
+        this.message = "CHAT|"+message;
     }
 
     //Constructor para mensajes del servidor
@@ -27,14 +28,16 @@ public class Message {
         this.client = "";
         this.message = message;
     }
-
+    //CHAT|HelloWorld!
+    //[Timestamp] Username: Helloworld!
     public String parseMessage() {
         String[] parts = this.message.split("\\|", 2);
         this.type = parts[0];
         this.body = parts.length > 1 ? parts[1] : "";
     
         switch (this.type) {
-            case "CHAT" -> {
+            case "CHAT" ->{
+                hashMessages.addUserMessage(this.client, getMessage());
                 return getMessage();  // Display the message in the chat
             }
             case "CMD" -> {
@@ -43,6 +46,7 @@ public class Message {
             default -> { return ""; } 
         }
     }
+
     
     //INPUT:.getUawe))zzz
     //CHAT|HelloWorld!

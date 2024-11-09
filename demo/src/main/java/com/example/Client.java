@@ -176,10 +176,10 @@ public class Client extends JFrame {
             String enteredUsername = userField.getText();
             String password = new String(passField.getPassword());
 
-            if (clientCredentials.getOrDefault(username, "").equals(password)) { //TODO: COMPROBAR CONTRA HASH
+            if (clientCredentials.get(enteredUsername).equals(password)) { //TODO: COMPROBAR CONTRA HASH
                 username = enteredUsername; // Assign the entered username
                 setTitle("Chat "+username);
-                sendMessage("#NEWUSER:"+username);
+                sendMessage("#NEWUSER: "+username+" "+password);
                 cardLayout.show(mainPanel, "screen3Lobby");
             } else {
                 JOptionPane.showMessageDialog(this, "Usuari o contrasenya incorrecta.", "Error d'inici de sessió", JOptionPane.ERROR_MESSAGE);
@@ -308,6 +308,9 @@ public class Client extends JFrame {
         messageField.addActionListener(e -> {
             String message = messageField.getText();
             sendMessage(message);
+            //TODO
+            Message storedMessage = new Message(message, username);
+            storedMessage.parseMessage();
             messageField.setText("");  
         });
 
@@ -319,6 +322,9 @@ public class Client extends JFrame {
         sendButton.addActionListener(e -> {
             String message = messageField.getText();
             sendMessage(message);
+            //TODO
+            Message storedMessage = new Message(message, username);
+            storedMessage.parseMessage();
             messageField.setText("");
         });
 
@@ -436,6 +442,7 @@ public class Client extends JFrame {
                             connectedUsers = new ArrayList<String>();
                         } else if(serverMessage.contains("#REFRESH:")){
                             addUserToList(serverMessage);
+                            addUserToHash(serverMessage);
                         } else if(serverMessage.contains("#DONEREFRESHING")){   //Stop refreshing means we can create the new lobby list
                             for(String user : connectedUsers){
                                 lobby.add(new JMenuItem(user));
@@ -523,6 +530,15 @@ public class Client extends JFrame {
             }
         }
     }
+
+    //INPUT #NEWUSER: username password
+    private void addUserToHash(String message) {
+        String[] parts = message.split(" ", 3);      //Split the message through the ':'
+        if (!clientCredentials.containsKey(username)) {
+            clientCredentials.put(parts[1], parts[2]);
+        }
+    }
+    //OUTPUT nada
 
     private void startWordle(){
         SwingUtilities.invokeLater(() -> new Wordle());
