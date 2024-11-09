@@ -19,6 +19,7 @@ import messages.Encrypt;
 public class Server {
     private static final List<ClientHandler> clients = new ArrayList<>();
     private static final List<String> clientNames = new ArrayList<>();
+    //TODO Tabla hash
     private static boolean adminClient = false;
     private static final SecretKey key = Encrypt.generateKey();
 

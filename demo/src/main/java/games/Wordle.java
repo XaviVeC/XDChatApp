@@ -75,7 +75,7 @@ public class Wordle extends JFrame {
         JPanel guessPanel = new JPanel();
         guessPanel.setLayout(new GridLayout(1, 5));
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 5; i++) { 
             JLabel letterLabel = new JLabel(String.valueOf(guess.charAt(i)), SwingConstants.CENTER);
             letterLabel.setOpaque(true);
             letterLabel.setFont(new Font("Arial", Font.BOLD, 20));

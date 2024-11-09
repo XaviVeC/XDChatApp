@@ -5,7 +5,6 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -24,8 +23,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
-import javax.crypto.SecretKey;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -50,17 +50,14 @@ public class Client extends JFrame {
     private Socket socket;
     private PrintWriter output;
     private BufferedReader input;
-    private SecretKey key;     
     private JTextArea chatArea;
     private JTextField messageField;
-    private String username;
-    private static List<String> userList = new ArrayList<>();
+    private String username, pwd;
+    private Map<String, String> clientCredentials = new HashMap<>();    
     private final JMenu lobby = new JMenu("Lobby");
+    private static List<String> connectedUsers = new ArrayList<>();
+    //private static Map<String, String> clientCredentials = new HashMap<String, String>();
 
-
-    // Simulated user database for validation (for demonstration purposes only)
-    private List<String> registeredUsers = new ArrayList<>();
-    private List<String> registeredPasswords = new ArrayList<>();
 
     // Panels for different screens
     private JPanel mainPanel;
@@ -80,10 +77,10 @@ public class Client extends JFrame {
         }
 
         // Simulate existing users for testing
-        registeredUsers.add("user1");
-        registeredPasswords.add("pwd1");
-        registeredUsers.add("user2");
-        registeredPasswords.add("pwd2");
+        clientCredentials.put("user1", "pwd1");
+        clientCredentials.put("user2", "pwd2");
+        clientCredentials.put("user3", "pwd3");
+
 
         // Set up CardLayout
         cardLayout = new CardLayout();
@@ -179,8 +176,7 @@ public class Client extends JFrame {
             String enteredUsername = userField.getText();
             String password = new String(passField.getPassword());
 
-            if (registeredUsers.contains(enteredUsername) && 
-                registeredPasswords.get(registeredUsers.indexOf(enteredUsername)).equals(password)) {
+            if (clientCredentials.getOrDefault(username, "").equals(password)) { //TODO: COMPROBAR CONTRA HASH
                 username = enteredUsername; // Assign the entered username
                 setTitle("Chat "+username);
                 sendMessage("#NEWUSER:"+username);
@@ -251,13 +247,12 @@ public class Client extends JFrame {
             }
         
             // Comprovació si l'usuari ja existeix
-            if (registeredUsers.contains(enteredUsername)) {
+            if (clientCredentials.containsKey(username)) {
                 JOptionPane.showMessageDialog(this, "Aquest usuari ja existeix.", "Error de registre", JOptionPane.ERROR_MESSAGE);
             } else if (!password.equals(confirmPassword)) {
                 JOptionPane.showMessageDialog(this, "Les contrasenyes no coincideixen.", "Error de registre", JOptionPane.ERROR_MESSAGE);
             } else {
-                registeredUsers.add(enteredUsername);
-                registeredPasswords.add(password);
+                clientCredentials.put(enteredUsername, password);
                 username = enteredUsername; // Assignar el nom d'usuari en registrar-se
                 JOptionPane.showMessageDialog(this, "Registre complet!");
                 setTitle("Chat "+username);
@@ -284,7 +279,7 @@ public class Client extends JFrame {
         chatsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         sidebar.add(chatsLabel);
 
-        for (String user : userList) {
+        for (String user : connectedUsers) {
             JLabel userLabel = new JLabel(user);
             userLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             sidebar.add(userLabel);
@@ -344,7 +339,7 @@ public class Client extends JFrame {
         menuBar.add(lobby);
         JMenuItem lobbyItem = new JMenuItem("");
         lobby.add(lobbyItem);
-        for(String user : userList){
+        for(String user : connectedUsers){
             lobby.add(new JMenuItem(user));
         }
 
@@ -367,9 +362,9 @@ public class Client extends JFrame {
     }
 
     private void initializeScreen4Invite() {
-        JPanel panel = new JPanel(new GridLayout(userList.size() + 1, 1));
+        JPanel panel = new JPanel(new GridLayout(connectedUsers.size() + 1, 1));
         List<JCheckBox> checkBoxes = new ArrayList<>();
-        for (String user : userList) {
+        for (String user : connectedUsers) {
             JCheckBox checkBox = new JCheckBox(user);
             checkBoxes.add(checkBox);
             panel.add(checkBox);
@@ -395,22 +390,6 @@ public class Client extends JFrame {
             // Show main chat screen and open new window for Wordle game
             cardLayout.show(mainPanel, "screen3Lobby");
             sendMessage("#GAME1 "+this.username);
-            /*JFrame wordleFrame = new JFrame("Wordle");
-            wordleFrame.setSize(300, 200);
-            wordleFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            wordleFrame.setLocationRelativeTo(null);
-
-            // Adding Cancel button to the Wordle frame
-            JPanel wordlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-            JButton wordleCancelButton = new JButton("Cancel·lar");
-            wordleCancelButton.setBackground(new Color(220, 20, 60));
-            wordleCancelButton.setForeground(Color.WHITE);
-            wordleCancelButton.setFont(new Font("Arial", Font.BOLD, 14));
-            wordleCancelButton.addActionListener(event -> wordleFrame.dispose());
-
-            wordlePanel.add(wordleCancelButton);
-            wordleFrame.add(wordlePanel);
-            wordleFrame.setVisible(true);*/
         });
         
         cancelButton.addActionListener(e -> cardLayout.show(mainPanel, "screen3Lobby"));
@@ -454,26 +433,26 @@ public class Client extends JFrame {
                             //key = extractKey(serverMessage);
                         } else if(serverMessage.contains("#NEWLIST")){      //If server says to create new list (client was erased or added)
                             lobby.removeAll();
-                            userList = new ArrayList<String>();
+                            connectedUsers = new ArrayList<String>();
                         } else if(serverMessage.contains("#REFRESH:")){
                             addUserToList(serverMessage);
                         } else if(serverMessage.contains("#DONEREFRESHING")){   //Stop refreshing means we can create the new lobby list
-                            for(String user : userList){
+                            for(String user : connectedUsers){
                                 lobby.add(new JMenuItem(user));
                             }
                         } else if(serverMessage.contains("#STARTWORDLE")){
-                            int response = JOptionPane.showConfirmDialog(this,"Do you want to accept this action?","Confirm",JOptionPane.YES_NO_OPTION,JOptionPane.QUESTION_MESSAGE);
+                            int response = JOptionPane.showConfirmDialog(this,"Vols jugar al Wordle?","Confirm",JOptionPane.YES_NO_OPTION,JOptionPane.QUESTION_MESSAGE);
                             switch (response) {
                                 case JOptionPane.YES_OPTION:
-                                    JOptionPane.showMessageDialog(this, "You accepted! Waiting for other players.");
+                                    JOptionPane.showMessageDialog(this, "Has acceptat! Gaudeix del joc.");
                                     sendMessage("#GAME1ACCEPT "+this.username);
                                     break;
                                 case JOptionPane.NO_OPTION:
-                                    JOptionPane.showMessageDialog(this, "You declined!");
+                                    JOptionPane.showMessageDialog(this, "Has Rebutjat!");
                                     sendMessage("#GAME1DECLINE "+this.username);
                                     break;
                                 default:
-                                    JOptionPane.showMessageDialog(this, "You declined!");
+                                    JOptionPane.showMessageDialog(this, "Has Rebutjat!");
                                     sendMessage("#GAME1DECLINE");
                                     break;
                             }
@@ -488,6 +467,7 @@ public class Client extends JFrame {
                 }
             });
             thread.start();
+
 
             addWindowListener(new WindowAdapter() {
                 @Override
@@ -528,7 +508,7 @@ public class Client extends JFrame {
         int separatorIndex = message.indexOf(':');      //Split the message through the ':'
         if (separatorIndex != -1) {
             String u = message.substring(separatorIndex + 1).trim();    //Contains username
-            userList.add(u);
+            connectedUsers.add(u);
             return u;
         }
         return "";
@@ -538,8 +518,8 @@ public class Client extends JFrame {
         int separatorIndex = message.indexOf(':');      //Split the message through the ':'
         if (separatorIndex != -1) {
             String u = message.substring(separatorIndex + 1).trim();    //Contains username
-            if(!userList.contains(u)){
-                userList.add(u);
+            if(!connectedUsers.contains(u)){
+                connectedUsers.add(u);
             }
         }
     }
@@ -548,10 +528,95 @@ public class Client extends JFrame {
         SwingUtilities.invokeLater(() -> new Wordle());
     }
 
+    
+
+	public Socket getSocket() {
+		return socket;
+	}
+
+	public void setSocket(Socket socket) {
+		this.socket = socket;
+	}
+
+	public PrintWriter getOutput() {
+		return output;
+	}
+
+	public void setOutput(PrintWriter output) {
+		this.output = output;
+	}
+
+	public BufferedReader getInput() {
+		return input;
+	}
+
+	public void setInput(BufferedReader input) {
+		this.input = input;
+	}
+
+	public JTextArea getChatArea() {
+		return chatArea;
+	}
+
+	public void setChatArea(JTextArea chatArea) {
+		this.chatArea = chatArea;
+	}
+
+	public JTextField getMessageField() {
+		return messageField;
+	}
+
+	public void setMessageField(JTextField messageField) {
+		this.messageField = messageField;
+	}
+
+	public String getUsername() {
+		return this.username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getPassword() {
+		return pwd;
+	}
+
+	public void setPassword(String password) {
+		this.pwd = password;
+	}
+
+	public static List<String> getconnectedUsers() {
+		return connectedUsers;
+	}
+
+	public static void setconnectedUsers(List<String> connectedUsers) {
+		Client.connectedUsers = connectedUsers;
+	}
+
+	public JMenu getLobby() {
+		return lobby;
+	}
+
+	public JPanel getMainPanel() {
+		return mainPanel;
+	}
+
+	public void setMainPanel(JPanel mainPanel) {
+		this.mainPanel = mainPanel;
+	}
+
+	public CardLayout getCardLayout() {
+		return cardLayout;
+	}
+
+	public void setCardLayout(CardLayout cardLayout) {
+		this.cardLayout = cardLayout;
+	}
+
     public static void main(String[] args) {
-        Client client = new Client("localhost", 8888);      //Connect to port 8888 from localhost
+        Client client = new Client("127.0.0.1", 8888);      //Connect to port 8888 from localhost , change on lab computer IP 
         client.setVisible(true);    //Set gui visible
     }
 
-    
 }
