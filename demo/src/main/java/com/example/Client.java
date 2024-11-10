@@ -80,6 +80,7 @@ public class Client extends JFrame {
         clientCredentials.put("user1", "pwd1");
         clientCredentials.put("user2", "pwd2");
         clientCredentials.put("user3", "pwd3");
+        clientCredentials.put("xavi", "xavi");
 
 
         // Set up CardLayout
@@ -308,9 +309,6 @@ public class Client extends JFrame {
         messageField.addActionListener(e -> {
             String message = messageField.getText();
             sendMessage(message);
-            //TODO
-            Message storedMessage = new Message(message, username);
-            storedMessage.parseMessage();
             messageField.setText("");  
         });
 
@@ -322,9 +320,6 @@ public class Client extends JFrame {
         sendButton.addActionListener(e -> {
             String message = messageField.getText();
             sendMessage(message);
-            //TODO
-            Message storedMessage = new Message(message, username);
-            storedMessage.parseMessage();
             messageField.setText("");
         });
 
