@@ -11,16 +11,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.crypto.SecretKey;
-
 import exceptions.EmptyUserException;
-import messages.Encrypt;
 
 public class Server {
     private static final List<ClientHandler> clients = new ArrayList<>();
     private static final List<String> clientNames = new ArrayList<>();
     private static boolean adminClient = false;
-    private static final SecretKey key = Encrypt.generateKey();
 
     public static void main(String[] args) {
         int port = 8888; // Port number where the server listens
@@ -192,20 +188,6 @@ public class Server {
         }
     }
     
-    //Warning because it is never used locally
-    private void broadcastEncryptedMessage(String message) {     //For each client, print on their output stream (encrypted)
-        try {
-            String encryptedMsg = Encrypt.encrypt(message, key);
-            synchronized (clients) {
-                for (ClientHandler client : clients) {
-                    client.output.println(encryptedMsg);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-    }
 
     private String getData(String message, boolean user) throws EmptyUserException {    //Obtain message or sender depending on the user boolean. True means get sender, false means get message
         String[] parts = message.split(" ", 3); // Split into [timestamp] [username:] [message]

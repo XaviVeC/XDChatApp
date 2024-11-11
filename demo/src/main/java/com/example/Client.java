@@ -177,7 +177,7 @@ public class Client extends JFrame {
             String enteredUsername = userField.getText();
             String password = new String(passField.getPassword());
 
-            if (clientCredentials.get(enteredUsername).equals(password)) { //TODO: COMPROBAR CONTRA HASH
+            if (clientCredentials.get(enteredUsername).equals(password)) {
                 username = enteredUsername; // Assign the entered username
                 setTitle("Chat "+username);
                 sendMessage("#NEWUSER: "+username+" "+password);
